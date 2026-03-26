@@ -628,6 +628,9 @@ run_openclaw_setup() {
 }
 
 switch_to_target_user_shell_if_requested() {
+  local switch_mode="stdio"
+  local tty_fd=""
+
   if ((AUTO_SWITCH_TO_USER == 0)); then
     log "Skipping automatic switch to '$TARGET_USER' (--no-switch-user set)"
     return 0
@@ -639,13 +642,29 @@ switch_to_target_user_shell_if_requested() {
   fi
 
   if [[ ! -t 0 || ! -t 1 ]]; then
+    if exec {tty_fd}<> /dev/tty; then
+      switch_mode="tty"
+      log "Piped/non-interactive stdin detected; using /dev/tty for user switch"
+    else
+      switch_mode="none"
+    fi
+  fi
+
+  if [[ "$switch_mode" == "none" ]]; then
     log "Non-interactive shell detected; not switching users. Run manually: sudo -iu $TARGET_USER"
     return 0
   fi
 
   log "Switching to login shell for '$TARGET_USER' so you can paste pairing approval commands"
   log "Type 'exit' to leave the '$TARGET_USER' shell"
+  if [[ "$switch_mode" == "tty" ]]; then
+    exec su - "$TARGET_USER" <&"$tty_fd" >&"$tty_fd" 2>&"$tty_fd"
+  fi
   exec su - "$TARGET_USER"
+
+  if [[ -n "$tty_fd" ]]; then
+    exec {tty_fd}>&-
+  fi
   die "Failed to switch to '$TARGET_USER'. Run manually: sudo -iu $TARGET_USER"
 }
 
