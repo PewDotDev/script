@@ -229,23 +229,53 @@ ensure_target_user() {
 }
 
 set_target_user_password_if_requested() {
+  local password_prompt_mode="stdio"
+  local tty_fd=""
+
   if ((SET_USER_PASSWORD)); then
     log "Setting password for '$TARGET_USER'"
     if ((DRY_RUN)); then
       log "[dry-run] would run: passwd $TARGET_USER"
     else
+      if [[ ! -t 0 || ! -t 1 ]]; then
+        if exec {tty_fd}<> /dev/tty; then
+          password_prompt_mode="tty"
+          log "Piped/non-interactive stdin detected; using /dev/tty for password prompts"
+        else
+          password_prompt_mode="none"
+        fi
+      fi
+
+      if [[ "$password_prompt_mode" == "none" ]]; then
+        die "Failed to set password for '$TARGET_USER' in non-interactive mode. Re-run with --skip-user-password or run script without piping"
+      fi
+
       while true; do
-        if run_cmd passwd "$TARGET_USER"; then
+        if [[ "$password_prompt_mode" == "tty" ]]; then
+          if passwd "$TARGET_USER" <&"$tty_fd" >&"$tty_fd" 2>&1; then
+            log "Password set for '$TARGET_USER'"
+            break
+          fi
+        elif run_cmd passwd "$TARGET_USER"; then
           log "Password set for '$TARGET_USER'"
           break
         fi
 
+        if [[ "$password_prompt_mode" == "tty" ]]; then
+          log "Password update failed (for example, mismatch or policy). Please try again"
+          continue
+        fi
+
         if [[ ! -t 0 || ! -t 1 ]]; then
-          die "Failed to set password for '$TARGET_USER' in non-interactive mode"
+          die "Failed to set password for '$TARGET_USER' in non-interactive mode. Re-run with --skip-user-password or run script without piping"
         fi
 
         log "Password update failed (for example, mismatch or policy). Please try again"
       done
+
+      if [[ -n "$tty_fd" ]]; then
+        exec {tty_fd}>&-
+      fi
     fi
   fi
 }

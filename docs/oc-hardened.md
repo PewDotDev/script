@@ -78,7 +78,31 @@ curl -fsSL https://script.pew.dev/oc-hardened.sh | sudo bash -s -- --dry-run
 - OpenClaw command runs once per user+command hash marker: `/var/lib/openclaw-bootstrap/openclaw_cmd.<user>.sha256`
 - Remove that file to force re-run with the same command.
 - `--authorized-key` must be a single valid OpenSSH public key line.
-- In non-interactive runs, use `--skip-user-password` if you cannot answer `passwd` prompts.
+- The script can prompt for password via `/dev/tty` even when invoked with `curl ... | sudo bash`.
+- If your environment is truly non-interactive (no `/dev/tty`), use `--skip-user-password`.
+
+## Troubleshooting
+
+If you see:
+
+`ERROR: Failed to set password for '<user>' in non-interactive mode`
+
+This means the script could not access an interactive TTY for `passwd` (for example, no `/dev/tty` in the current environment).
+
+Use one of these:
+
+Skip password setup (recommended for key-based SSH):
+
+```bash
+curl -fsSL https://script.pew.dev/oc-hardened.sh | sudo bash -s -- --skip-user-password
+```
+
+Or run without piping so `passwd` can prompt normally:
+
+```bash
+curl -fsSLo /tmp/oc-hardened.sh https://script.pew.dev/oc-hardened.sh
+sudo bash /tmp/oc-hardened.sh
+```
 
 ## Important
 
