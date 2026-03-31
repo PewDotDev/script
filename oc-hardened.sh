@@ -214,10 +214,10 @@ ensure_target_user() {
     log "User '$TARGET_USER' already exists"
   else
     log "Creating user '$TARGET_USER'"
-    run_cmd adduser --disabled-password --gecos "" "$TARGET_USER"
+    run_cmd adduser --disabled-password --gecos "" "$TARGET_USER" >/dev/null
   fi
 
-  run_cmd usermod -aG sudo "$TARGET_USER"
+  run_cmd usermod -aG sudo "$TARGET_USER" >/dev/null
 
   user_home="$(getent passwd "$TARGET_USER" | cut -d: -f6 || true)"
   if [[ -z "$user_home" ]] && ((DRY_RUN)); then
@@ -285,6 +285,9 @@ ensure_target_authorized_keys() {
   local target_ssh_dir="${user_home}/.ssh"
   local target_auth_keys="${target_ssh_dir}/authorized_keys"
   local root_auth_keys="/root/.ssh/authorized_keys"
+  local invoking_user="${SUDO_USER:-}"
+  local invoking_user_home=""
+  local invoking_user_auth_keys=""
 
   run_cmd install -d -m 700 -o "$TARGET_USER" -g "$TARGET_USER" "$target_ssh_dir"
 
@@ -314,15 +317,35 @@ ensure_target_authorized_keys() {
   if [[ -s "$target_auth_keys" ]]; then
     log "Found SSH key(s) for '$TARGET_USER'"
   else
+    if [[ -n "$invoking_user" && "$invoking_user" != "root" ]]; then
+      invoking_user_home="$(getent passwd "$invoking_user" | cut -d: -f6 || true)"
+      if [[ -n "$invoking_user_home" ]]; then
+        invoking_user_auth_keys="${invoking_user_home}/.ssh/authorized_keys"
+      fi
+    fi
+
     if [[ -s "$root_auth_keys" ]]; then
       log "Copying root authorized_keys to '$TARGET_USER' to prevent lockout"
       run_cmd cp "$root_auth_keys" "$target_auth_keys"
       run_cmd chown "$TARGET_USER:$TARGET_USER" "$target_auth_keys"
       run_cmd chmod 600 "$target_auth_keys"
+    elif [[ -n "$invoking_user_auth_keys" && -s "$invoking_user_auth_keys" ]]; then
+      log "Copying $invoking_user authorized_keys to '$TARGET_USER' to prevent lockout"
+      run_cmd cp "$invoking_user_auth_keys" "$target_auth_keys"
+      run_cmd chown "$TARGET_USER:$TARGET_USER" "$target_auth_keys"
+      run_cmd chmod 600 "$target_auth_keys"
     elif ((DRY_RUN)); then
-      log "[dry-run] no SSH keys found yet for '$TARGET_USER'; non-dry-run would abort before SSH hardening"
+      if [[ -n "$invoking_user_auth_keys" ]]; then
+        log "[dry-run] no SSH keys found yet for '$TARGET_USER' in target, root, or $invoking_user_auth_keys; non-dry-run would abort before SSH hardening"
+      else
+        log "[dry-run] no SSH keys found yet for '$TARGET_USER' in target or root; non-dry-run would abort before SSH hardening"
+      fi
     else
-      die "No SSH keys found for '$TARGET_USER' and /root/.ssh/authorized_keys is missing. Aborting before SSH hardening"
+      if [[ -n "$invoking_user_auth_keys" ]]; then
+        die "No SSH keys found for '$TARGET_USER'. Checked $target_auth_keys, $root_auth_keys, and $invoking_user_auth_keys. Aborting before SSH hardening"
+      else
+        die "No SSH keys found for '$TARGET_USER'. Checked $target_auth_keys and $root_auth_keys. Aborting before SSH hardening"
+      fi
     fi
   fi
 
