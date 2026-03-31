@@ -374,7 +374,7 @@ write_ssh_hardening_config() {
   log "Writing SSH hardening config to $SSH_HARDEN_FILE"
 
   if ((DRY_RUN)); then
-    log "[dry-run] write file '$SSH_HARDEN_FILE' with Port $SSH_PORT, PermitRootLogin no, PasswordAuthentication no, KbdInteractiveAuthentication no, ChallengeResponseAuthentication no, PubkeyAuthentication yes, AllowUsers $TARGET_USER"
+    log "[dry-run] write file '$SSH_HARDEN_FILE' with Port $SSH_PORT, PermitRootLogin no, PasswordAuthentication no, KbdInteractiveAuthentication no, ChallengeResponseAuthentication no, PubkeyAuthentication yes"
     return
   fi
 
@@ -387,7 +387,6 @@ PasswordAuthentication no
 KbdInteractiveAuthentication no
 ChallengeResponseAuthentication no
 PubkeyAuthentication yes
-AllowUsers ${TARGET_USER}
 EOF
 }
 
