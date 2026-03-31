@@ -23,9 +23,9 @@ curl -fsSL https://sh.pew.dev/oc-hardened.sh | sudo bash
 
 - Ubuntu `24.04`
 - Run as root (`sudo`)
-- You must have an SSH key for the target user, or in one of:
-  `/root/.ssh/authorized_keys` or the invoking sudo user's `~/.ssh/authorized_keys`
-- If no key exists in any of those locations, the script stops before SSH hardening (to avoid lockout)
+- You must have an SSH key for the target user, or for the invoking sudo user in `~/.ssh/authorized_keys`
+- If the script is run directly as root (no sudo user context), it falls back to `/root/.ssh/authorized_keys`
+- If no key exists in the applicable locations, the script stops before SSH hardening (to avoid lockout)
 
 ## Common Commands
 

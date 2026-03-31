@@ -324,25 +324,25 @@ ensure_target_authorized_keys() {
       fi
     fi
 
-    if [[ -s "$root_auth_keys" ]]; then
-      log "Copying root authorized_keys to '$TARGET_USER' to prevent lockout"
-      run_cmd cp "$root_auth_keys" "$target_auth_keys"
-      run_cmd chown "$TARGET_USER:$TARGET_USER" "$target_auth_keys"
-      run_cmd chmod 600 "$target_auth_keys"
-    elif [[ -n "$invoking_user_auth_keys" && -s "$invoking_user_auth_keys" ]]; then
+    if [[ -n "$invoking_user_auth_keys" && -s "$invoking_user_auth_keys" ]]; then
       log "Copying $invoking_user authorized_keys to '$TARGET_USER' to prevent lockout"
       run_cmd cp "$invoking_user_auth_keys" "$target_auth_keys"
       run_cmd chown "$TARGET_USER:$TARGET_USER" "$target_auth_keys"
       run_cmd chmod 600 "$target_auth_keys"
+    elif [[ -z "$invoking_user_auth_keys" && -s "$root_auth_keys" ]]; then
+      log "Copying root authorized_keys to '$TARGET_USER' to prevent lockout"
+      run_cmd cp "$root_auth_keys" "$target_auth_keys"
+      run_cmd chown "$TARGET_USER:$TARGET_USER" "$target_auth_keys"
+      run_cmd chmod 600 "$target_auth_keys"
     elif ((DRY_RUN)); then
       if [[ -n "$invoking_user_auth_keys" ]]; then
-        log "[dry-run] no SSH keys found yet for '$TARGET_USER' in target, root, or $invoking_user_auth_keys; non-dry-run would abort before SSH hardening"
+        log "[dry-run] no SSH keys found yet for '$TARGET_USER' in target or $invoking_user_auth_keys; non-dry-run would abort before SSH hardening"
       else
         log "[dry-run] no SSH keys found yet for '$TARGET_USER' in target or root; non-dry-run would abort before SSH hardening"
       fi
     else
       if [[ -n "$invoking_user_auth_keys" ]]; then
-        die "No SSH keys found for '$TARGET_USER'. Checked $target_auth_keys, $root_auth_keys, and $invoking_user_auth_keys. Aborting before SSH hardening"
+        die "No SSH keys found for '$TARGET_USER'. Checked $target_auth_keys and $invoking_user_auth_keys. Aborting before SSH hardening"
       else
         die "No SSH keys found for '$TARGET_USER'. Checked $target_auth_keys and $root_auth_keys. Aborting before SSH hardening"
       fi
