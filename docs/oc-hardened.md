@@ -2,7 +2,7 @@
 
 Back to repo index: [`README.md`](../README.md)
 
-`oc-hardened.sh` sets up a fresh Ubuntu 24.04 server with a safer default config, then runs OpenClaw as a dedicated sudo user.
+`oc-hardened.sh` sets up a fresh Ubuntu 22.04 or above server with a safer default config, then runs OpenClaw as a dedicated sudo user.
 
 ## Quick Start
 
@@ -21,7 +21,7 @@ curl -fsSL https://sh.pew.dev/oc-hardened.sh | sudo bash
 
 ## Requirements
 
-- Ubuntu `24.04`
+- Ubuntu `22.04` or above
 - Run as root (`sudo`)
 - You must have an SSH key for the target user, or for the invoking sudo user in `~/.ssh/authorized_keys`
 - If the script is run directly as root (no sudo user context), it falls back to `/root/.ssh/authorized_keys`
