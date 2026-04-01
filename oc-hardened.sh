@@ -36,7 +36,7 @@ usage() {
   cat <<USAGE
 Usage: ${SCRIPT_NAME} [options]
 
-Bootstrap and harden an Ubuntu 24.04 VPS, then run OpenClaw setup.
+Bootstrap and harden an Ubuntu 22.04 or above VPS, then run OpenClaw setup.
 
 Options (all optional):
   --user <name>          Dedicated sudo user for OpenClaw (default: openclaw)
@@ -184,8 +184,11 @@ validate_os() {
   # shellcheck disable=SC1091
   source /etc/os-release
 
-  [[ "${ID:-}" == "ubuntu" ]] || die "Unsupported OS: ${ID:-unknown}. This script supports Ubuntu 24.04"
-  [[ "${VERSION_ID:-}" == "24.04" ]] || die "Unsupported Ubuntu version: ${VERSION_ID:-unknown}. Use Ubuntu 24.04"
+  [[ "${ID:-}" == "ubuntu" ]] || die "Unsupported OS: ${ID:-unknown}. This script supports Ubuntu 22.04 or above"
+  [[ -n "${VERSION_ID:-}" ]] || die "Cannot detect Ubuntu version from /etc/os-release"
+  if ! dpkg --compare-versions "${VERSION_ID}" ge "22.04"; then
+    die "Unsupported Ubuntu version: ${VERSION_ID:-unknown}. Use Ubuntu 22.04 or above"
+  fi
 
   command -v apt-get >/dev/null 2>&1 || die "apt-get is required"
   command -v systemctl >/dev/null 2>&1 || die "systemctl is required"
